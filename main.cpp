@@ -64,6 +64,20 @@ int main()
     float increment2 = 0.01;
     float increment3 = 0.01;
 
+    float vertices[] = { // three points (they are x,y,z coordinates) to form a triangle
+        -0.5f, -0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        0.0f,  0.5f, 0.0f
+    };  
+
+    unsigned int VBO; // a Vertex Buffer Object
+    glGenBuffers(1, &VBO); // OpenGL creates one buffer object internally and gives its ID to VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); // binds VBO to GL_ARRAY_BUFFER
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // copy the vertice into the buffer memory 
+    // (use GL_DYNAMIC_DRAW if the data changes often)
+
+
+
     while(!glfwWindowShouldClose(window)){ //loops until the X button is pressed
         processInput(window);
         
