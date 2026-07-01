@@ -177,7 +177,7 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         glfwSwapBuffers(window);
-        glfwPollEvents();    
+        glfwPollEvents();
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
