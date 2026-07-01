@@ -141,7 +141,8 @@ int main()
     // Then bind and set vertex buffers 
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // binds VBO to GL_ARRAY_BUFFER
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // copy the vertice into the buffer memory 
-    // (use GL_DYNAMIC_DRAW if the data changes often)
+    // (use GL_DYNAMIC_DRAW if the data changes often and get used often)
+    // (use GL_STATIC_DRAW if the data changes rarely, but gets used often)
 
     //and then configure vertex attributes(s).
     // position attribute
@@ -167,6 +168,9 @@ int main()
     float increment2 = 0.01;
     float increment3 = 0.01;
 
+    float y_offset = 0.0f;
+    float y_offset_inc = 0.01;
+
     // MAIN LOOP
     while(!glfwWindowShouldClose(window)){ //loops until the X button is pressed
         processInput(window);
@@ -174,6 +178,8 @@ int main()
         r = cycle_colour(r, increment1);
         g = cycle_colour(g, increment2);
         b = cycle_colour(b, increment3);
+
+        y_offset = cycle_colour(y_offset, y_offset_inc);
         
         glClearColor(r,b,g, 1.0f); 
         glClear(GL_COLOR_BUFFER_BIT);
@@ -186,11 +192,13 @@ int main()
     
 
         // update the uniform color
-        float timeValue = glfwGetTime();
-        float greenValue = sin(timeValue) / 2.0f + 0.5f;
-        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-        
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "another_color");
+        glUniform4f(vertexColorLocation, 1.0f - r, 1.0f - g, 1.0f - b, 1.0f);
+
+        //update uniform position
+        int vertexPosLocation = glGetUniformLocation(shaderProgram, "aPos_offset");
+        glUniform3f(vertexPosLocation, 0.0f, -y_offset * 0.15, 0.0f);
+        std::cout<<y_offset<<"\n";
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
