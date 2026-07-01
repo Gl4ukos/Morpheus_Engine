@@ -31,6 +31,7 @@ Shader::Shader(const char* vertex_filename, const char* fragment_filename){
     }
     catch(std::ifstream::failure e){
         std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+        exit(-1);
     }
 
     const char* vShaderCode = vertexCode.c_str();
@@ -50,6 +51,7 @@ Shader::Shader(const char* vertex_filename, const char* fragment_filename){
     if(!success){
         glGetShaderInfoLog(vertex, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        exit(-1);
     };
 
     //compiling fragment shader
@@ -61,6 +63,7 @@ Shader::Shader(const char* vertex_filename, const char* fragment_filename){
     if(!success){
         glGetShaderInfoLog(fragment, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+        exit(-1);
     }
 
     //Linking into Shader Program
@@ -83,6 +86,10 @@ void Shader::use(){
     glUseProgram(ID);
 }
 
+void Shader::die(){
+    glDeleteProgram(ID);
+}
+
 void Shader::setBool(const std::string &name, bool value) const
 {         
     glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value); 
@@ -94,6 +101,11 @@ void Shader::setInt(const std::string &name, int value) const
 void Shader::setFloat(const std::string &name, float value) const
 { 
     glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
-} 
-
+}
+void Shader::set_vec4(const std::string name, float a, float b, float c, float d){
+    glUniform4f(glGetUniformLocation(ID, name.c_str()), a, b, c, d);
+}
+void Shader::set_vec3(const std::string name, float a, float b, float c){
+    glUniform3f(glGetUniformLocation(ID, name.c_str()), a, b, c);
+}
 

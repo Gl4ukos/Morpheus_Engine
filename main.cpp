@@ -30,6 +30,17 @@ std::string load_file_to_string(std::string filename){
     return buffer.str();
 }
 
+float cycle_rads_wrap(float &value, float &increment){
+    value += increment; 
+    
+    if(value > M_PI){
+        value *= -1.0f;
+    }else if(value < -M_PI){
+        value *= -1.0f;
+    }
+    return value;
+}
+
 float cycle_colour(float &value, float &increment){
     value += increment; 
     
@@ -40,6 +51,7 @@ float cycle_colour(float &value, float &increment){
     }
     return value;
 }
+
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -63,6 +75,7 @@ int main()
     glfwMakeContextCurrent(window); //Creting GLFW context
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);// adding callback for each time the window gets fumbled with
 
+
     // Initializing GLAD (MUST BE DONE AFTER CREATING GLFW CONTEXT)
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -71,71 +84,34 @@ int main()
     }  
 
 
-    //loading shader code from .glsl files
-    std::string vertex_shader_source_str = load_file_to_string("Shaders/vertex_shader.glsl"); 
-    const char *vertexShaderSource = vertex_shader_source_str.c_str();
-    std::string fragment_shader_source_str = load_file_to_string("Shaders/fragment_shader.glsl"); 
-    const char *fragmentShaderSource = fragment_shader_source_str.c_str();
-
-
-    // build and compile the shaders
-    //vertex shader
-    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    // check for shader compile errors
-    int success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-
-    //fragment shader
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    // check for shader compile errors
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-
-    // link shaders
-    unsigned int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    // check for linking errors
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-
+    Shader shader ("Shaders/vertex_shader.glsl", "Shaders/fragment_shader.glsl");
 
     float vertices[] = {
         // positions         // colors
-        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
-        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
-    };    
+        0.27f, 0.43f, 0.15f,  1.0f, 0.0f, 0.0f,   // top right front
+        -0.27f, 0.43f, 0.15f,  0.0f, 1.0f, 0.0f,  // top left front
+        0.0f,  -0.3f, 0.0f,  0.0f, 0.0f, 0.0f, // bottom mid
+        0.0f, 0.43f, -0.31f,  0.0f, 0.0f, 1.0f   // top mid back
+    };
+
+    //indices for pyramid
+    unsigned int indices[] = {
+        // Front
+        0, 1, 2,
+        // Left
+        1, 3, 2,
+        // Right
+        3, 0, 2,
+        // Back
+        0, 3, 1
+    };
 
     unsigned int VBO; // a Vertex Buffer Object
     unsigned int VAO; // a Vertex Array Object
+    unsigned int EBO; // element abuffer object
     glGenBuffers(1, &VBO); // OpenGL creates one buffer object internally and gives its ID to VBO
     glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &EBO);
 
      // bind the Vertex Array Object first
     glBindVertexArray(VAO);
@@ -146,6 +122,9 @@ int main()
     // (use GL_DYNAMIC_DRAW if the data changes often and get used often)
     // (use GL_STATIC_DRAW if the data changes rarely, but gets used often)
 
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
     //and then configure vertex attributes(s).
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -153,7 +132,7 @@ int main()
     // color attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
     glEnableVertexAttribArray(1);
-
+    glEnable(GL_DEPTH_TEST); //enabling depth
 
     // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
@@ -173,6 +152,9 @@ int main()
     float y_offset = 0.0f;
     float y_offset_inc = 0.01;
 
+    float y_rotation = 0.0f;
+    float y_rotation_inc = 0.03;
+
     // MAIN LOOP
     while(!glfwWindowShouldClose(window)){ //loops until the X button is pressed
         processInput(window);
@@ -182,27 +164,33 @@ int main()
         b = cycle_colour(b, increment3);
 
         y_offset = cycle_colour(y_offset, y_offset_inc);
-        
+        // y_rotation = cycle_rads_wrap(y_rotation, y_rotation_inc);
+        y_rotation += y_rotation_inc;
+        std::cout<<"\r"<<y_rotation<<std::flush;
+
         glClearColor(r,b,g, 1.0f); 
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // Note that we also specify the color to clear the screen with using glClearColor. 
         // Whenever we call glClear and clear the color buffer, 
         // the entire color buffer will be filled with the color as configured by glClearColor. 
         // This will result in a dark green-blueish color. 
 
-        glUseProgram(shaderProgram);  // "select" the mentioned shader program (bc there may be many)
-    
+        shader.use();    
 
         // update the uniform color
-        int vertexColorLocation = glGetUniformLocation(shaderProgram, "another_color");
-        glUniform4f(vertexColorLocation, 1.0f - r, 1.0f - g, 1.0f - b, 1.0f);
+        shader.set_vec4("another_color", 1.0f - r, 1.0f - g, 1.0f - b, 1.0f);
+        
+        // int vertexColorLocation = glGetUniformLocation(shaderProgram, "another_color");
+        // glUniform4f(vertexColorLocation, 1.0f - r, 1.0f - g, 1.0f - b, 1.0f);
 
         //update uniform position
-        int vertexPosLocation = glGetUniformLocation(shaderProgram, "aPos_offset");
-        glUniform3f(vertexPosLocation, 0.0f, -y_offset * 0.15, 0.0f);
+        shader.setFloat("y_offset", -y_offset * 0.15f);
+        shader.setFloat("y_rotation", y_rotation);
+        // int vertexPosLocation = glGetUniformLocation(shaderProgram, "aPos_offset");
+        // glUniform3f(vertexPosLocation, 0.0f, -y_offset * 0.15, 0.0f);
 
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -211,7 +199,6 @@ int main()
     // optional: de-allocate all resources once they've outlived their purpose:
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
 
     glfwTerminate(); //closes the window
     return 0;
